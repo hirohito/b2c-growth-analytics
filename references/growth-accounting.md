@@ -1,50 +1,55 @@
 # Growth Accounting — Deep Reference
 
-*Synthesized from: Reforge (Brian Balfour, Jonathan Hsu's "Diligence at Social Capital"), Andrew Chen's network effects writing, Amplitude's growth accounting framework*
+<document>
+<metadata>
+  <title>Growth Accounting Methodology</title>
+  <purpose>Authoritative methodology for MAU decomposition and Quick Ratio analysis. Loaded by the b2c-growth-analytics SKILL during Step 2d.</purpose>
+  <sources>
+    <source>Reforge — Brian Balfour</source>
+    <source>Jonathan Hsu — "Diligence at Social Capital" (ex-Facebook growth)</source>
+    <source>Andrew Chen — network effects writing</source>
+    <source>Amplitude — growth accounting framework</source>
+  </sources>
+</metadata>
 
----
+<thesis>
+<quote source="Jonathan Hsu (Social Capital)">It is mathematically impossible to grow if you cannot retain users.</quote>
+<problem>A flat or growing MAU number can hide a dying product. Growth Accounting decomposes MAU change into its drivers, exposing whether growth is healthy compounding or a treadmill of churn-and-replace.</problem>
+</thesis>
 
-## Why Growth Accounting Matters
+<section id="mau_equation">
+<title>The MAU Equation</title>
 
-A flat or growing MAU number can hide a dying product. **Growth Accounting decomposes MAU change into its drivers**, exposing whether growth is healthy compounding or a treadmill of churn-and-replace.
-
-> "It is mathematically impossible to grow if you cannot retain users." — Jonathan Hsu (Social Capital, ex-Facebook)
-
----
-
-## The MAU Equation
-
-```
+<identity>
 MAU(this month) = MAU(last month) + New + Resurrected − Churned
+</identity>
 
-Where:
-- New        = first-ever active this month
-- Retained   = active last month AND this month
-- Resurrected= active this month, NOT last month, but was active before
-- Churned    = active last month, NOT this month
-```
+<components>
+  <component name="New" definition="First-ever active this month." />
+  <component name="Retained" definition="Active last month AND this month." />
+  <component name="Resurrected" definition="Active this month, NOT last month, but was active before." />
+  <component name="Churned" definition="Active last month, NOT this month." />
+</components>
 
-This is the **fundamental identity**. Every MAU number can be decomposed this way.
+<principle>This is the fundamental identity. Every MAU number can be decomposed this way.</principle>
+</section>
 
----
+<section id="computing_growth_accounting">
+<title>Computing Growth Accounting</title>
 
-## Computing Growth Accounting
-
-```python
+<code language="python"><![CDATA[
 import pandas as pd
 
 def compute_growth_accounting(df, user_col='user_id', date_col='active_date'):
     """
-    Input: dataframe with user_id and active_date columns (one row per user-day active)
-    Output: monthly growth accounting decomposition
+    Input: dataframe with user_id and active_date columns (one row per user-day active).
+    Output: monthly growth accounting decomposition.
     """
     df[date_col] = pd.to_datetime(df[date_col])
     df['month'] = df[date_col].dt.to_period('M')
     
-    # Set of active users per month
     monthly_users = df.groupby('month')[user_col].apply(set)
     
-    # Track who has ever been active before each month
     ever_active = set()
     results = []
     
@@ -73,136 +78,124 @@ def compute_growth_accounting(df, user_col='user_id', date_col='active_date'):
         ever_active |= users
     
     return pd.DataFrame(results)
-```
+]]></code>
+</section>
 
----
+<section id="quick_ratio">
+<title>Quick Ratio</title>
+<source>Social Capital / Jonathan Hsu</source>
+<significance>The fundamental health metric of growth.</significance>
 
-## Quick Ratio (Social Capital / Jonathan Hsu)
+<formula>Quick Ratio = (New + Resurrected) / Churned</formula>
 
-The fundamental health metric of growth:
+<interpretation_table>
+  <ratio value="&gt; 4" label="Excellent" meaning="Growing fast and healthily." />
+  <ratio value="2-4" label="Good" meaning="Sustainable growth." />
+  <ratio value="1-2" label="Marginal" meaning="Barely growing." />
+  <ratio value="&lt; 1" label="Shrinking" meaning="Losing users faster than acquiring." />
+</interpretation_table>
 
-```
-Quick Ratio = (New + Resurrected) / Churned
-```
+<critical_insight>A product can have growing MAU with a Quick Ratio just above 1 — it's running on a treadmill. As soon as acquisition slows, it collapses.</critical_insight>
+</section>
 
-| Quick Ratio | Interpretation |
-|---|---|
-| > 4 | Excellent — growing fast and healthily |
-| 2–4 | Good — sustainable growth |
-| 1–2 | Marginal — barely growing |
-| < 1 | Shrinking — losing users faster than acquiring |
+<section id="retention_churn_spectrum">
+<title>Retention-Churn Spectrum</title>
 
-**Critical insight:** A product can have growing MAU with a Quick Ratio just above 1 — it's running on a treadmill. As soon as acquisition slows, it collapses.
+<formula>Monthly Churn Rate = Churned / MAU(t-1)</formula>
 
----
+<annual_implications>
+  <row monthly_churn="1%" annual_retained="88%" />
+  <row monthly_churn="3%" annual_retained="69%" />
+  <row monthly_churn="5%" annual_retained="54%" />
+  <row monthly_churn="7%" annual_retained="42%" />
+  <row monthly_churn="10%" annual_retained="28%" />
+  <row monthly_churn="15%" annual_retained="14%" />
+</annual_implications>
 
-## Retention-Churn Spectrum
+<rule>For most B2C apps, monthly churn above 7-8% means you're building on sand.</rule>
+</section>
 
-Plot churned users as % of last month's MAU:
-```
-Monthly Churn Rate = Churned / MAU(t-1)
-```
+<section id="resurrected_users">
+<title>Resurrected Users: The Hidden Story</title>
 
-| Monthly Churn | Annual Implications |
-|---|---|
-| 1% | 88% retained after 1 year |
-| 3% | 69% retained |
-| 5% | 54% retained |
-| 7% | 42% retained |
-| 10% | 28% retained |
-| 15% | 14% retained |
+<insight>Resurrected users are often misunderstood. A high resurrection rate can be a sign of:</insight>
 
-For most B2C apps, monthly churn above 7–8% means you're building on sand.
+<signal type="good">A product with episodic use cases (travel, tax, fitness seasonal).</signal>
+<signal type="bad">Re-engagement campaigns that briefly wake users who churn again immediately.</signal>
 
----
-
-## Resurrected Users: The Hidden Story
-
-**Resurrected users are often misunderstood.** A high resurrection rate can be a sign of:
-- **Good:** A product with episodic use cases (travel, tax, fitness seasonal)
-- **Bad:** Re-engagement campaigns that briefly wake users who churn again immediately
-
-**Always check the "Resurrected-then-Churned-again" rate.** If users who resurrect don't stay for 2+ months, your resurrection efforts are vanity metrics.
-
-```python
-# Compute "sticky resurrection" - users who resurrected and stayed
+<diagnostic name="sticky_resurrection_rate">
+  <description>Check the "Resurrected-then-Churned-again" rate. If users who resurrect don't stay for 2+ months, your resurrection efforts are vanity metrics.</description>
+  <code language="python"><![CDATA[
 resurrected_users = set(...)  # users resurrected in month M
-next_month_users = set(...)  # users active in month M+1
+next_month_users = set(...)   # users active in month M+1
 sticky_resurrection_rate = len(resurrected_users & next_month_users) / len(resurrected_users)
-```
+  ]]></code>
+  <target healthy="&gt; 50%" warning="&lt; 30% means resurrection is just noise" />
+</diagnostic>
+</section>
 
-Target: >50% sticky resurrection. Below 30% means resurrection is just noise.
+<section id="dau_mau_ratio">
+<title>The DAU/MAU Ratio (Stickiness)</title>
 
----
+<formula>Stickiness = DAU / MAU</formula>
 
-## The DAU/MAU Ratio (Stickiness)
+<interpretation_table>
+  <ratio value="&gt; 50%" category="Daily-habit product" examples="Instagram, WhatsApp" />
+  <ratio value="20-50%" category="Strong frequent-use" examples="Spotify, Netflix" />
+  <ratio value="10-20%" category="Weekly-use product" examples="Banking apps, food delivery" />
+  <ratio value="&lt; 10%" category="Occasional/episodic use" examples="Travel, real estate" />
+</interpretation_table>
 
-```
-Stickiness = DAU / MAU
-```
+<rule>"Good" DAU/MAU depends on the natural use case. A travel app with 10% DAU/MAU may be world-class; a social app with 10% is dying.</rule>
+</section>
 
-This tells you what % of monthly users use the product on any given day:
+<section id="power_user_curve">
+<title>The Power User Curve (L7 Histogram)</title>
 
-| DAU/MAU | Interpretation |
-|---|---|
-| > 50% | Daily-habit product (Instagram, WhatsApp) |
-| 20–50% | Strong frequent-use (Spotify, Netflix) |
-| 10–20% | Weekly-use product (banking apps, food delivery) |
-| < 10% | Occasional/episodic use (travel, real estate) |
+<description>Plot a histogram of days active in last 28 days. x-axis = days active, y-axis = number of users.</description>
 
-Whether your DAU/MAU is "good" depends on the natural use case. A travel app with 10% DAU/MAU may be world-class; a social app with 10% is dying.
+<healthy_shape>U-shape or right-skew with a meaningful right bulge (power users on the right).</healthy_shape>
+<unhealthy_shape>Heavy left-skew (most users barely engaged) with no right bulge.</unhealthy_shape>
 
----
+<diagnostic>If you see no right bulge, your "MAU" is mostly drive-by users. Even high MAU is hollow.</diagnostic>
+</section>
 
-## The "Power User Curve" (L7 Histogram)
+<section id="reporting_template">
+<title>Growth Accounting Waterfall (Reporting Template)</title>
 
-Plot a histogram of days active in last 28 days, x-axis = days, y-axis = # users:
+<rule>For every report, show this decomposition.</rule>
 
-```
-Number of users
-   │ ▓
-   │ ▓
-   │ ▓ ▓                              ▓
-   │ ▓ ▓ ▓                       ▓ ▓ ▓
-   │ ▓ ▓ ▓ ▓ ▓ ▓ ▓ ▓ ▓ ▓ ▓ ▓ ▓ ▓ ▓ ▓ ▓
-   └──────────────────────────────────────
-    0 1 2 3 4 5 6 7 8 ... 28
-```
+<example_table>
+  <header>Month 1 | Month 2 | Month 3 | Month 4</header>
+  <row label="Starting MAU">— | 50,000 | 62,000 | 71,000</row>
+  <row label="+ New">50,000 | 18,000 | 15,000 | 14,000</row>
+  <row label="+ Resurrected">— | 3,000 | 4,000 | 5,000</row>
+  <row label="− Churned">— | −9,000 | −10,000 | −11,000</row>
+  <row label="Ending MAU">50,000 | 62,000 | 71,000 | 79,000</row>
+  <row label="Quick Ratio">∞ | 2.33 | 1.90 | 1.73</row>
+</example_table>
 
-**Healthy products have a U-shape or right-skew with a meaningful right bulge** (power users on right side).
-**Unhealthy products are heavily left-skewed** (most users barely engaged) with no right bulge.
+<insight>Even though MAU is growing in this example, the declining Quick Ratio signals trouble. The product is increasingly dependent on new acquisition to offset rising churn.</insight>
+</section>
 
-If you see no right bulge, your "MAU" is mostly drive-by users. Even high MAU is hollow.
+<section id="lifecycle_view">
+<title>Activation, Retention, Resurrection: Lifecycle View</title>
 
----
+<purpose>The three "growth accounting drivers" map to product strategy.</purpose>
 
-## Combined Growth Accounting Waterfall (Reporting Template)
+<driver name="new_users_acquisition" owned_by="Acquisition + Onboarding">
+  <key_levers>Channels, landing pages, onboarding flow.</key_levers>
+</driver>
 
-For every report, show this:
-```
-              Month 1   Month 2   Month 3   Month 4
-Starting MAU    -       50,000    62,000    71,000
-+ New        50,000     18,000    15,000    14,000
-+ Resurrected  -         3,000     4,000     5,000
-− Churned      -        -9,000   -10,000   -11,000
-─────────────────────────────────────────────────────
-Ending MAU   50,000     62,000    71,000    79,000
+<driver name="retained_users_churn_reduction" owned_by="Product + Engagement">
+  <key_levers>Habits, notifications, core value.</key_levers>
+</driver>
 
-Quick Ratio    ∞         2.33      1.90      1.73   ← declining!
-```
+<driver name="resurrected_users_winback" owned_by="Lifecycle Marketing">
+  <key_levers>Win-back emails, push, comeback offers.</key_levers>
+</driver>
 
-Even though MAU is growing, the **declining Quick Ratio** signals trouble.
+<diagnostic_question>When diagnosing a problem, ask: which of these three is broken? That tells you which team owns the fix.</diagnostic_question>
+</section>
 
----
-
-## Activation, Retention, Resurrection: Lifecycle View
-
-The three "growth accounting drivers" map to product strategy:
-
-| Driver | Owned by | Key levers |
-|---|---|---|
-| New users (Activation rate ↑) | Acquisition + Onboarding | Channels, landing pages, onboarding flow |
-| Retained users (Churn rate ↓) | Product + Engagement | Habits, notifications, core value |
-| Resurrected users (Resurrection rate ↑) | Lifecycle Marketing | Win-back emails, push, comeback offers |
-
-When diagnosing a problem, ask: **which of these three is broken?** That tells you which team owns the fix.
+</document>
